@@ -36,6 +36,8 @@ v `/root/Projects/teams-claude-bot`; pracovní adresář session je `/root/Proje
 | `allowDangerouslySkipPermissions` jen na vyžádání — upstream ho posílá vždy a **root na vps s ním padá exit 1** (`--dangerously-skip-permissions cannot be used with root`) | `src/claude/session.ts` | `ALLOW_DANGEROUSLY_SKIP_PERMISSIONS` (0) |
 | Manifest: scope `groupChat`, branding Eventuality | `manifest/manifest.json` | — |
 | `/healthz`: model, idleHours, lastActivityAt | `src/index.ts` | — |
+| Bez streamování ve skupinách (Teams vrací 405) — rovnou proaktivní zprávy | `src/bot/message.ts` | — |
+| **Zápisové okno**: zpráva „potvrzuji/schvaluji/confirm" od povoleného uživatele vytvoří na jeden tah unlock soubor pro hook `caflou-write-guard` v checkeru; po tahu nebo po TTL zmizí | `src/bot/unlock.ts`, `src/bot/message.ts` | `WRITE_UNLOCK_FILE`, `WRITE_UNLOCK_TTL_MIN`, `WRITE_UNLOCK_PATTERN` |
 
 Z upstreamu zůstává: **jedna globální session** (ne per-user), SDK strippuje @označení (`mentions.stripText`),
 streaming odpovědí, příkazy `/new /stop /model /permission /sessions /status`, tool-interceptor
@@ -58,4 +60,5 @@ streaming odpovědí, příkazy `/new /stop /model /permission /sessions /status
 - Nespouštět bota s prázdnými allowlisty mimo bootstrap: kdo se dostane do povolené konverzace, má shell na
   produkčním vps s Caflou tokenem.
 - Neotvírat `/api/handoff` ani devtools zvenku — nginx pouští jen `/api/messages` a `/healthz`.
-- Zápisy do Caflou hlídá hook v checkeru, ne tento kód; log a undo jsou v `/root/caflou-bot/`.
+- Zápisy do Caflou hlídá hook v checkeru; tento kód jen otevírá zápisové okno na lidské „potvrzuji". Log a undo jsou v `/root/caflou-bot/`.
+  ⚠️ Session Claude běží jako root, takže model by soubor technicky mohl vytvořit sám — hook chrání před omylem a před slepým následováním injektovaného textu, ne před záměrným obcházením. Skutečná ochrana = oddělený unixový uživatel bez Caflou tokenu + lokální zápisová služba (v plánu).

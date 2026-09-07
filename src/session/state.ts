@@ -39,6 +39,8 @@ export interface ManagedSession {
   userActivityId?: string;
   /** Pending reaction to send after stream closes (emoji response). */
   pendingReaction?: string;
+  /** Closes the caflou write window opened for the current turn (see bot/unlock.ts). */
+  closeWriteWindow?: () => void;
 }
 
 // ─── Persistence ───

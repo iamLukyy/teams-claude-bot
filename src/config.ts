@@ -4,6 +4,7 @@ import { homedir } from "os";
 import { resolve, dirname } from "path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { CANONICAL_ENV_PATH, HANDOFF_TOKEN_PATH } from "./paths.js";
+import { DEFAULT_UNLOCK_PATTERN } from "./bot/unlock.js";
 
 // Load config: env vars (highest) > cwd/.env (repo dev) > canonical (npm/setup)
 dotenv.config();
@@ -107,6 +108,12 @@ export const config = {
   sessionIdleHours: Number.parseFloat(process.env.SESSION_IDLE_HOURS ?? "12") || 0,
   /** Default Claude model for new sessions (alias like "opus" or a full model id). */
   defaultModel: process.env.DEFAULT_MODEL ?? "opus",
+  /** Unlock file for the checker's caflou-write-guard hook. Unset = feature off. */
+  writeUnlockFile: process.env.WRITE_UNLOCK_FILE || undefined,
+  /** Message pattern (case-insensitive) that opens the write window for one turn. */
+  writeUnlockPattern: new RegExp(process.env.WRITE_UNLOCK_PATTERN ?? DEFAULT_UNLOCK_PATTERN, "i"),
+  /** Safety net: the window closes after this many minutes even if the turn hangs. */
+  writeUnlockTtlMin: Number.parseFloat(process.env.WRITE_UNLOCK_TTL_MIN ?? "15") || 15,
 } as const;
 
 // Map existing env vars for Teams SDK (SDK reads CLIENT_ID/CLIENT_SECRET/TENANT_ID)

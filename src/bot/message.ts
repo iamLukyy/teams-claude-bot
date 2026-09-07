@@ -21,6 +21,7 @@ import { saveConversationId, getConversationId } from "../handoff/store.js";
 import { interactiveCards } from "./cards.js";
 import { createManagedSession } from "./bridge.js";
 import { isAadAllowed, isConversationAllowed } from "./access.js";
+import { isUnlockMessage, openWriteWindow } from "./unlock.js";
 
 // ─── Stream cancellation detection ──────────────────────────────────
 // Teams shows a Stop button during streaming. When clicked, the server
@@ -233,6 +234,19 @@ export function registerMessageHandler(app: App): void {
       managed.onTurnComplete = resolve;
     });
 
+    // Human confirmation → open the write window for this turn only. The user is
+    // already past the AAD + conversation gates here, so this is the "button".
+    if (config.writeUnlockFile && text && isUnlockMessage(text, config.writeUnlockPattern)) {
+      managed.closeWriteWindow?.();
+      console.log(
+        `[WRITE] unlock by aad=${activity.from.aadObjectId ?? "?"} in conv=${convIdForSession}`,
+      );
+      managed.closeWriteWindow = openWriteWindow(
+        config.writeUnlockFile,
+        config.writeUnlockTtlMin * 60_000,
+      );
+    }
+
     console.log("[BOT] Sending message to session...");
     if (inlineBlocks.length > 0) {
       const content: ContentBlock[] = [
@@ -246,6 +260,12 @@ export function registerMessageHandler(app: App): void {
 
     // Await until onResult resolves (or stream expires via 403)
     await resultPromise;
+
+    // Write window lives for one turn
+    if (managed.closeWriteWindow) {
+      managed.closeWriteWindow();
+      managed.closeWriteWindow = undefined;
+    }
 
     // If response was a single emoji, replace the stream message with a reaction
     if (managed.pendingReaction && managed.userActivityId && convIdForSession) {

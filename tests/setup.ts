@@ -22,5 +22,8 @@ vi.mock("../src/config.js", () => ({
     allowedConversations: new Set<string>(),
     sessionIdleHours: 12,
     defaultModel: "opus",
+    writeUnlockFile: undefined,
+    writeUnlockPattern: /^\s*(potvrzuji|confirm)\b/i,
+    writeUnlockTtlMin: 15,
   },
 }));
