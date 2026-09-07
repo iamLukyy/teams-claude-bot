@@ -4,18 +4,18 @@
   "version": "0.1.0",
   "id": "YOUR_TEAMS_APP_ID",
   "developer": {
-    "name": "Claude Code Teams Bot",
-    "websiteUrl": "https://github.com",
-    "privacyUrl": "https://github.com",
-    "termsOfUseUrl": "https://github.com"
+    "name": "Eventuality s.r.o.",
+    "websiteUrl": "https://eventuality.app",
+    "privacyUrl": "https://eventuality.app",
+    "termsOfUseUrl": "https://eventuality.app"
   },
   "name": {
-    "short": "Claude Code",
-    "full": "Claude Code Teams Bot"
+    "short": "Eventuality Bot",
+    "full": "Eventuality Bot (Claude Code + Caflou)"
   },
   "description": {
-    "short": "Control Claude Code from Teams",
-    "full": "A Teams bot that bridges to Claude Code running on your local machine. Send messages to Claude Code and receive responses with syntax-highlighted code directly in Teams."
+    "short": "Firemní asistent nad Caflou",
+    "full": "Claude Code session s firemními skills: dotazy nad Caflou (platby, faktury, projekty), zápis dokladů po potvrzení, přehledy. Reaguje v 1:1 chatu a ve skupinovém chatu na @označení."
   },
   "icons": {
     "color": "color.png",
@@ -25,12 +25,18 @@
   "bots": [
     {
       "botId": "YOUR_BOT_APP_ID",
-      "scopes": ["personal"],
+      "scopes": [
+        "personal",
+        "groupChat"
+      ],
       "supportsFiles": true,
       "isNotificationOnly": false,
       "commandLists": [
         {
-          "scopes": ["personal"],
+          "scopes": [
+            "personal",
+            "groupChat"
+          ],
           "commands": [
             {
               "title": "/help",
@@ -77,6 +83,8 @@
       ]
     }
   ],
-  "permissions": ["messageTeamMembers"],
+  "permissions": [
+    "messageTeamMembers"
+  ],
   "validDomains": []
 }

@@ -20,6 +20,7 @@ import { config } from "../config.js";
 import { saveConversationId, getConversationId } from "../handoff/store.js";
 import { interactiveCards } from "./cards.js";
 import { createManagedSession } from "./bridge.js";
+import { isAadAllowed, isConversationAllowed } from "./access.js";
 
 // ─── Stream cancellation detection ──────────────────────────────────
 // Teams shows a Stop button during streaming. When clicked, the server
@@ -77,12 +78,8 @@ export function patchStreamCancellation(
 // ─── Auth ─────────────────────────────────────────────────────────────────
 
 function isUserAllowed(activity: IMessageActivity): boolean {
-  if (config.allowedUsers.size === 0) return true;
-  const aadId = activity.from.aadObjectId?.toLowerCase();
-  const name = activity.from.name?.toLowerCase();
-  if (aadId && config.allowedUsers.has(aadId)) return true;
-  if (name && config.allowedUsers.has(name)) return true;
-  return false;
+  // Entra object ID only — display names are user-editable and never trusted
+  return isAadAllowed(activity.from.aadObjectId, config.allowedUsers);
 }
 
 // ─── Register routes ──────────────────────────────────────────────────────
@@ -98,11 +95,20 @@ export function registerMessageHandler(app: App): void {
     // Skip empty messages — no typing for these
     if (!hasText && !hasAttachments) return;
 
+    // Conversation lock — anything outside ALLOWED_CONVERSATIONS is dropped silently
+    const convId = ctx.ref.conversation?.id;
+    console.log(
+      `[AUTH] message from aad=${activity.from.aadObjectId ?? "?"} name="${activity.from.name ?? "?"}" conv=${convId ?? "?"}`,
+    );
+    if (!isConversationAllowed(convId, config.allowedConversations)) {
+      console.warn(`[AUTH] Ignoring message — conversation not allowed: ${convId}`);
+      return;
+    }
+
     // Typing indicator first — user sees "..." immediately
     await ctx.send(new TypingActivity());
 
     // Save conversationId for proactive messaging
-    const convId = ctx.ref.conversation?.id;
     const userId =
       activity.from.aadObjectId?.toLowerCase() ??
       activity.from.name?.toLowerCase();
@@ -115,6 +121,14 @@ export function registerMessageHandler(app: App): void {
       await ctx.send("Sorry, you are not authorized to use this bot.");
       return;
     }
+
+    // Idle policy: a session nobody used for SESSION_IDLE_HOURS is closed and a fresh one starts
+    if (state.expireIdleSession()) {
+      await ctx.send(
+        `🕒 Session byla ${config.sessionIdleHours} h bez aktivity, začínám novou.`,
+      );
+    }
+    state.touchActivity();
 
     let text = (activity.text ?? "").trim();
 
@@ -244,6 +258,13 @@ export function registerMessageHandler(app: App): void {
   // Save conversation ref on bot install
   app.on("install.add", async (ctx: IActivityContext) => {
     const convId = ctx.ref.conversation?.id;
+    console.log(
+      `[AUTH] install.add from aad=${ctx.activity.from?.aadObjectId ?? "?"} name="${ctx.activity.from?.name ?? "?"}" conv=${convId ?? "?"}`,
+    );
+    if (!isConversationAllowed(convId, config.allowedConversations)) {
+      console.warn(`[AUTH] Ignoring install — conversation not allowed: ${convId}`);
+      return;
+    }
     const userId =
       ctx.activity.from?.aadObjectId?.toLowerCase() ??
       ctx.activity.from?.name?.toLowerCase();

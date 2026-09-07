@@ -13,6 +13,7 @@ import {
   registerPromptRequest,
 } from "../claude/user-input.js";
 import * as state from "../session/state.js";
+import { config } from "../config.js";
 import { type ClaudeResult, type ProgressEvent } from "../claude/agent.js";
 import { ConversationSession, type SessionConfig } from "../claude/session.js";
 import {
@@ -482,6 +483,7 @@ export function createManagedSession(
     model: state.getModel(),
     thinkingTokens: state.getThinkingTokens(),
     permissionMode: state.getPermissionMode(),
+    allowedTools: config.allowedTools,
     resume: overrides?.resume ?? savedId,
     forkSession: overrides?.forkSession,
     canUseTool: createToolInterceptor(sendToolCard, {

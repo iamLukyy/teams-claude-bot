@@ -52,6 +52,8 @@ interface PersistedData {
   cwd?: string;
   permissionMode?: string;
   titles?: Record<string, string>;
+  /** Epoch ms of the last user message (idle expiry across restarts). */
+  lastActivityAt?: number;
 }
 
 function loadPersisted(): PersistedData {
@@ -89,11 +91,20 @@ export function clearPersistedSessionId(): void {
 /** Load persisted state into memory (call on startup). */
 export function loadPersistedState(): void {
   const data = loadPersisted();
+  lastActivityAt = data.lastActivityAt;
   // .env PERMISSION_MODE takes priority on restart; otherwise use persisted value
   if (process.env.PERMISSION_MODE) {
     permissionMode = config.defaultPermissionMode;
   } else if (data.permissionMode) {
     permissionMode = data.permissionMode;
+  }
+  // A session that slept across a restart longer than the idle limit is not resumed
+  if (data.sessionId && isIdleExpired()) {
+    console.log(
+      `[STATE] Persisted session idle > ${config.sessionIdleHours}h — starting fresh`,
+    );
+    clearPersistedSessionId();
+    return;
   }
   // Restore cwd if valid; if invalid, leave sessionId so resume
   // fails naturally and the user sees the "could not resume" message.
@@ -129,10 +140,55 @@ export function destroySession(): void {
   permissionMode = config.defaultPermissionMode;
 }
 
+// ─── Idle expiry (close a session nobody used for SESSION_IDLE_HOURS) ───
+
+let lastActivityAt: number | undefined;
+
+/** Record user activity (memory + disk, so the limit survives restarts). */
+export function touchActivity(now: number = Date.now()): void {
+  lastActivityAt = now;
+  const data = loadPersisted();
+  data.lastActivityAt = now;
+  savePersisted(data);
+}
+
+export function getLastActivityAt(): number | undefined {
+  return lastActivityAt;
+}
+
+function idleLimitMs(): number {
+  return config.sessionIdleHours > 0 ? config.sessionIdleHours * 3_600_000 : 0;
+}
+
+export function isIdleExpired(now: number = Date.now()): boolean {
+  const limit = idleLimitMs();
+  if (!limit || lastActivityAt === undefined) return false;
+  return now - lastActivityAt > limit;
+}
+
+/**
+ * If the last activity is older than the idle limit: close the live session,
+ * forget the persisted session id and reset the clock. Returns true when it did.
+ */
+export function expireIdleSession(now: number = Date.now()): boolean {
+  if (!isIdleExpired(now)) return false;
+  const hadLive = managed !== null;
+  destroySession();
+  clearPersistedSessionId();
+  lastActivityAt = undefined;
+  const data = loadPersisted();
+  delete data.lastActivityAt;
+  savePersisted(data);
+  console.log(
+    `[STATE] Session idle > ${config.sessionIdleHours}h — ${hadLive ? "closed live session, " : ""}next message starts fresh`,
+  );
+  return true;
+}
+
 // ─── In-memory preferences (reset on restart) ───
 
 let workDir: string = config.claudeWorkDir;
-let model: string | undefined = "claude-opus-4-6";
+let model: string | undefined = config.defaultModel;
 let thinkingTokens: number | null | undefined;
 let permissionMode: string = config.defaultPermissionMode;
 let handoffMode: "pickup" | undefined;

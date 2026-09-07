@@ -34,6 +34,19 @@ function parseAllowedUsers(raw?: string): Set<string> {
   );
 }
 
+function parseCsvList(raw?: string): string[] | undefined {
+  if (!raw) return undefined;
+  const list = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return list.length > 0 ? list : undefined;
+}
+
+function parseCsvSet(raw?: string): Set<string> {
+  return new Set(parseCsvList(raw) ?? []);
+}
+
 function persistHandoffToken(token: string): void {
   try {
     mkdirSync(dirname(HANDOFF_TOKEN_PATH), { recursive: true });
@@ -86,6 +99,14 @@ export const config = {
   })(),
   sessionInitPrompt: process.env.SESSION_INIT_PROMPT,
   defaultPermissionMode: process.env.PERMISSION_MODE ?? "default",
+  /** Tools Claude may use without asking (CSV). Empty = SDK default (read-only set). */
+  allowedTools: parseCsvList(process.env.ALLOWED_TOOLS),
+  /** Teams conversation IDs the bot serves (CSV). Empty = any conversation. */
+  allowedConversations: parseCsvSet(process.env.ALLOWED_CONVERSATIONS),
+  /** Hours without messages after which the Claude session is closed and the next message starts fresh. 0 = never. */
+  sessionIdleHours: Number.parseFloat(process.env.SESSION_IDLE_HOURS ?? "12") || 0,
+  /** Default Claude model for new sessions (alias like "opus" or a full model id). */
+  defaultModel: process.env.DEFAULT_MODEL ?? "opus",
 } as const;
 
 // Map existing env vars for Teams SDK (SDK reads CLIENT_ID/CLIENT_SECRET/TENANT_ID)

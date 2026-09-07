@@ -1,0 +1,26 @@
+# /etc/systemd/system/teams-claude-bot.service — Eventuality Teams bot (vps)
+[Unit]
+Description=Eventuality Teams bot (Claude Code session over flaskapp-caflou-checker)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=root
+WorkingDirectory=/root/Projects/teams-claude-bot
+# Claude Code auth: same token file as interactive `claude` on this box (0600, root only)
+ExecStart=/bin/sh -c '. /root/.claude-oauth.env && exec /root/.local/node22/bin/node dist/index.js'
+Environment=NODE_ENV=production
+Environment=PATH=/root/.local/node22/bin:/root/.local/bin:/usr/local/bin:/usr/bin:/bin
+Restart=always
+RestartSec=5
+# Blast radius: memory cap covers Node + the Claude subprocess; kill the whole group on stop
+MemoryMax=3G
+TasksMax=512
+NoNewPrivileges=true
+KillMode=control-group
+TimeoutStopSec=30
+StandardOutput=append:/var/log/teams-claude-bot.log
+StandardError=append:/var/log/teams-claude-bot.log
+
+[Install]
+WantedBy=multi-user.target

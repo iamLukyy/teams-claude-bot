@@ -11,7 +11,14 @@ import {
 } from "./bot/cards.js";
 import { loadConversationRefs } from "./handoff/store.js";
 import { registerHandoffRoute } from "./handoff/api.js";
-import { getSession, loadPersistedState } from "./session/state.js";
+import {
+  getSession,
+  loadPersistedState,
+  expireIdleSession,
+  getLastActivityAt,
+  getModel,
+} from "./session/state.js";
+import { isAadAllowed, isConversationAllowed } from "./bot/access.js";
 import { registerMessageHandler } from "./bot/message.js";
 import { handleHandoff } from "./bot/bridge.js";
 
@@ -38,6 +45,9 @@ expressAdapter.get("/healthz", (_req: Request, res: Response) => {
     uptimeSec: Math.floor(process.uptime()),
     pid: process.pid,
     port: config.port,
+    model: getModel(),
+    idleHours: config.sessionIdleHours,
+    lastActivityAt: getLastActivityAt() ?? null,
     session: {
       active: Boolean(session),
       hasQuery: session?.session.hasQuery ?? false,
@@ -67,6 +77,19 @@ teamsApp.on("card.action", async (ctx) => {
     unknown
   >;
   const conversationId = ctx.ref.conversation?.id;
+
+  // Same gate as messages: buttons are writes too (confirm cards, permissions)
+  const aad = ctx.activity.from?.aadObjectId;
+  if (
+    !isAadAllowed(aad, config.allowedUsers) ||
+    !isConversationAllowed(conversationId, config.allowedConversations)
+  ) {
+    console.warn(
+      `[AUTH] Ignoring card action from aad=${aad ?? "?"} conv=${conversationId ?? "?"}`,
+    );
+    // No invoke response → Teams shows a generic failure to the clicker; nothing runs
+    return undefined;
+  }
 
   const sendFn = async (activity: string | ActivityParams) => {
     await ctx.send(activity);
@@ -140,6 +163,13 @@ teamsApp.on("card.action", async (ctx) => {
 
 // ─── Message handler + lifecycle ─────────────────────────────────────
 registerMessageHandler(teamsApp);
+
+// ─── Idle reaper: close a session nobody used for SESSION_IDLE_HOURS ──
+if (config.sessionIdleHours > 0) {
+  setInterval(() => {
+    expireIdleSession();
+  }, 5 * 60 * 1000).unref();
+}
 
 // ─── Error handler (must be after all routes) ──────────────────────
 expressAdapter.use(

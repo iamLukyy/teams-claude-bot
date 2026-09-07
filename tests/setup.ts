@@ -17,5 +17,10 @@ vi.mock("../src/config.js", () => ({
     allowedUsers: new Set<string>(),
     handoffToken: "test-token",
     sessionInitPrompt: undefined,
+    defaultPermissionMode: "default",
+    allowedTools: undefined,
+    allowedConversations: new Set<string>(),
+    sessionIdleHours: 12,
+    defaultModel: "opus",
   },
 }));

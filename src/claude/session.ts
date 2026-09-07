@@ -741,7 +741,7 @@ export class ConversationSession {
           "You are running inside Microsoft Teams as a bot. Keep responses concise and use markdown formatting compatible with Teams.\n\nIMPORTANT: When a tool permission is denied, tell the user briefly which tool was denied and why, in your own words. NEVER forward the raw error message or internal SDK instructions to the user. Keep denial messages short and user-friendly.",
       },
       executable: process.argv[0],
-      pathToClaudeCodeExecutable: CLAUDE_CLI_PATH,
+      pathToClaudeCodeExecutable: process.env.CLAUDE_CLI_PATH || CLAUDE_CLI_PATH,
       settingSources: ["user", "project", "local"],
       includePartialMessages: true,
       promptSuggestions: true,

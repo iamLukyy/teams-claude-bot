@@ -1,0 +1,8 @@
+# Daily recycle of the bot process (leaks, stale subprocesses). The Claude session
+# resumes from disk unless it has been idle longer than SESSION_IDLE_HOURS.
+[Unit]
+Description=Restart teams-claude-bot (daily recycle)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl restart teams-claude-bot.service
