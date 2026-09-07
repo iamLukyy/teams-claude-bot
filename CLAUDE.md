@@ -49,7 +49,10 @@ streaming odpovědí, příkazy `/new /stop /model /permission /sessions /status
 1. **Edituj lokálně** `~/Projects/teams-claude-bot` (Node ≥ 22; na Macu je 25).
 2. `npm run typecheck && npm run lint && npm test && npm run build` — všechno zelené, teprve pak commit.
    Testy jsou vitest v `tests/`; config je mockovaný v `tests/setup.ts` → **nové pole v `src/config.ts` doplň i do mocku**.
-3. Commit na `eventuality-deploy`, push. Na vps:
+3. Commit na `eventuality-deploy`, push. Na vps — **restart jen když bot nic nedělá** (restart zabije
+   rozpracovaný tah a zprávy ve frontě propadnou bez odpovědi; stalo se 2026-09-07). Nejdřív
+   `curl -s http://127.0.0.1:3978/healthz` → `session.hasQuery` musí být `false` a v logu nesmí být
+   čerstvé „Sending message to session…" bez „Response sent". Pak:
    ```bash
    ssh vps 'export PATH=/root/.local/node22/bin:$PATH; cd /root/Projects/teams-claude-bot && git pull --ff-only && npm ci && npm run build && systemctl restart teams-claude-bot && sleep 3 && curl -s https://teamsbot.eventuality.app/healthz'
    ```
