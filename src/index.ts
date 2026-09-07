@@ -130,6 +130,8 @@ teamsApp.on("card.action", async (ctx) => {
         managed.closeWriteWindow = openWriteWindow(
           config.writeUnlockFile,
           config.writeUnlockTtlMin * 60_000,
+          console,
+          { who, aad, conversation: conversationId, via: "button" },
         );
       }
       console.log(`[WRITE] unlock by button, aad=${aad ?? "?"} conv=${conversationId ?? "?"}`);

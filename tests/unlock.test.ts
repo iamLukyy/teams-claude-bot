@@ -14,12 +14,18 @@ const quiet = { log: () => {} };
 
 describe("isUnlockMessage", () => {
   it("matches Czech/English confirmations, also after a stripped mention", () => {
-    for (const t of ["potvrzuji", "Potvrzuji, zapiš", ": potvrzuji", "schvaluju", "confirm", "zapiš to"]) {
+    for (const t of [
+      "potvrzuji", "Potvrzuji, zapiš", ": potvrzuji", "schvaluju", "confirm", "zapiš to",
+      "ano zapiš to \"26A0150 Event Petrák\" je to tento projekt", "jo, potvrzuji", "OK potvrzuju", "zapiš", "Ano, zapiš.",
+    ]) {
       expect(isUnlockMessage(t, re), t).toBe(true);
     }
   });
   it("ignores questions and unrelated text", () => {
-    for (const t of ["kolik je tady faktur?", "nepotvrzuji", "ještě počkej", "oprav projekt na 26A0064"]) {
+    for (const t of [
+      "kolik je tady faktur?", "nepotvrzuji", "ještě počkej", "oprav projekt na 26A0064",
+      "zapiš tuto fakturu https://app.caflou.cz/x", "zapiš fakturu 2940136", "ano, ale oprav projekt",
+    ]) {
       expect(isUnlockMessage(t, re), t).toBe(false);
     }
   });

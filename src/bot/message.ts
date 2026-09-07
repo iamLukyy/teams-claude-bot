@@ -244,6 +244,13 @@ export function registerMessageHandler(app: App): void {
       managed.closeWriteWindow = openWriteWindow(
         config.writeUnlockFile,
         config.writeUnlockTtlMin * 60_000,
+        console,
+        {
+          who: activity.from.name,
+          aad: activity.from.aadObjectId,
+          conversation: convIdForSession,
+          via: "message",
+        },
       );
     }
 

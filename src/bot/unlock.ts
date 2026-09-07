@@ -10,20 +10,34 @@ import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
 
 export const DEFAULT_UNLOCK_PATTERN =
-  "^\\s*[:,\\-–]?\\s*(potvrzuji|potvrzuju|potvrzeno|schvaluji|schvaluju|confirm(ed)?|zapiš to|zapis to)\\b";
+  "^\\s*[:,\\-–]?\\s*(?:(?:ano|jo|jj|ok|okay|jasně|souhlas|souhlasím)[\\s,.!]*)?" +
+  "(potvrzuji|potvrzuju|potvrzeno|schvaluji|schvaluju|confirm(?:ed)?|zapiš to|zapis to|zapiš(?=\\s*[.!]*\\s*$))";
 
 export function isUnlockMessage(text: string, pattern: RegExp): boolean {
   return pattern.test(text);
 }
 
 /** Create the unlock file; returns a closer that removes it (also runs on TTL). */
+export interface UnlockMeta {
+  who?: string;
+  aad?: string;
+  conversation?: string;
+  via?: "button" | "message";
+}
+
 export function openWriteWindow(
   file: string,
   ttlMs: number,
   log: Pick<Console, "log"> = console,
+  meta: UnlockMeta = {},
 ): () => void {
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, new Date().toISOString() + "\n", { mode: 0o600 });
+  const payload = {
+    ...meta,
+    opened_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + ttlMs).toISOString(),
+  };
+  writeFileSync(file, JSON.stringify(payload) + "\n", { mode: 0o600 });
   log.log(`[WRITE] window opened (${file}), ttl ${Math.round(ttlMs / 60000)} min`);
   const timer = setTimeout(() => closeWriteWindow(file, log), ttlMs);
   timer.unref();
