@@ -33,6 +33,7 @@ v `/root/Projects/teams-claude-bot`; pracovní adresář session je `/root/Proje
 | Výchozí model | `src/session/state.ts` | `DEFAULT_MODEL` (opus) |
 | Nástroje bez ptaní — root na vps **nesmí** `bypassPermissions` | `src/bot/bridge.ts` | `ALLOWED_TOOLS` |
 | Nainstalovaný `claude` místo SDK-bundled `cli.js` | `src/claude/session.ts` | `CLAUDE_CLI_PATH` |
+| `allowDangerouslySkipPermissions` jen na vyžádání — upstream ho posílá vždy a **root na vps s ním padá exit 1** (`--dangerously-skip-permissions cannot be used with root`) | `src/claude/session.ts` | `ALLOW_DANGEROUSLY_SKIP_PERMISSIONS` (0) |
 | Manifest: scope `groupChat`, branding Eventuality | `manifest/manifest.json` | — |
 | `/healthz`: model, idleHours, lastActivityAt | `src/index.ts` | — |
 

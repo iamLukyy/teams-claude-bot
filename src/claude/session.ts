@@ -732,7 +732,10 @@ export class ConversationSession {
         "Skill",
       ],
       permissionMode: this.config.permissionMode ?? "default",
-      allowDangerouslySkipPermissions: true,
+      // Upstream hard-codes true. As root (our vps) the CLI refuses that flag and
+      // exits 1, so it is opt-in; ALLOWED_TOOLS + the checker hook cover our needs.
+      allowDangerouslySkipPermissions:
+        process.env.ALLOW_DANGEROUSLY_SKIP_PERMISSIONS === "1",
       maxTurns: this.config.maxTurns ?? 200,
       systemPrompt: {
         type: "preset",
