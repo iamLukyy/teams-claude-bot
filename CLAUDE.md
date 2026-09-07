@@ -5,6 +5,20 @@ streaming). **Naše větev: `eventuality-deploy`**, `main` = upstream. Bot běž
 v `/root/Projects/teams-claude-bot`; pracovní adresář session je `/root/Projects/flaskapp-caflou-checker`
 (tam je CLAUDE.md s pravidly chování bota, skills, hook `caflou-write-guard`, `docs/TEAMS-BOT.md` = návrh + stav).
 
+## Živé nasazení (stav 2026-09-07, 14:55)
+| Co | Hodnota / kde |
+|---|---|
+| Registrace bota | **Teams Developer Portal** (dev.teams.microsoft.com → Tools → Bot management), bot `eventuality-bot`. Žádná Azure subscription — Eventuality ji nemá a nepotřebuje. Vzniká jako single tenant. |
+| Bot ID = `MICROSOFT_APP_ID` | `f79a0dcf-5d1b-4299-af72-353b1ae61813` |
+| Tenant ID | `6775b406-54a0-4379-8098-076badb7f49a` (eventuality.cz; veřejně z `login.microsoftonline.com/eventuality.cz/v2.0/.well-known/openid-configuration`) |
+| `TEAMS_APP_ID` (id manifestu) | `30e786fe-e881-4f6c-a8a3-0a2d0ceefac0` |
+| Client secret | jen v `/root/Projects/teams-claude-bot/.env` na vps (0600). Vytvořen v Developer Portal → bot → Client secrets. Při rotaci: nový secret tam, přepsat `.env`, restart služby. |
+| Endpoint | Developer Portal → bot → Configure → `https://teamsbot.eventuality.app/api/messages` |
+| Služba | `systemctl status teams-claude-bot` (enabled, běží od 2026-09-07 14:52), log `/var/log/teams-claude-bot.log`, `curl -s https://teamsbot.eventuality.app/healthz` |
+| Balíček pro Teams | balí se **na Macu**: `node scripts/package-manifest.mjs f79a0dcf-5d1b-4299-af72-353b1ae61813 30e786fe-e881-4f6c-a8a3-0a2d0ceefac0` → `teams-claude-bot.zip` (na vps chybí `zip`). Nahrává se v Teams: Apps → Manage your apps → Upload a custom app. |
+| Allowlisty | `ALLOWED_USERS` / `ALLOWED_CONVERSATIONS` v `.env` — po bootstrapu z `[AUTH]` řádků logu MUSÍ být vyplněné (Lukáš, Adélka, 1:1 chat + skupina). |
+| Denní restart | `teams-claude-bot-restart.timer` (04:30) — zapnout po bootstrapu: `systemctl enable --now teams-claude-bot-restart.timer` |
+
 ## Čti nejdřív
 - `docs/EVENTUALITY-DEPLOY.md` — runbook: Azure Bot registrace, `.env`, systemd, sideload, bootstrap allowlistů
 - `deploy/` — systemd unit, denní restart timer, nginx site, šablona `.env`

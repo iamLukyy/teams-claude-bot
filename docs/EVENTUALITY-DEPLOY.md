@@ -21,23 +21,26 @@ Teams (1:1 nebo skupina, @Eventuality Bot)
 - Auth Claude: `/root/.claude-oauth.env` (setup-token, 0600) — sdílí limity Lukášova Max účtu; pro ostrý
   provoz vyměnit za Console API klíč (ToS).
 
-## Krok A — Lukáš (admin tenantu), ~10 min v prohlížeči
-1. **Azure Portal → Create a resource → „Azure Bot"**: Bot handle `eventuality-bot`, Pricing **F0**,
-   Microsoft App ID **Create new**, App type **Single Tenant**. Create.
-2. Po vytvoření: **Settings → Configuration → Messaging endpoint** =
-   `https://teamsbot.eventuality.app/api/messages` → Apply.
-3. **Channels → Microsoft Teams** → přijmout podmínky → Apply.
-4. **App Registrations → (ta app) → Overview**: opsat **Application (client) ID** a **Directory (tenant) ID**.
-   **Certificates & secrets → New client secret** (24 měsíců): opsat **Value** hned (později už nejde zobrazit).
-5. **Teams admin center → Teams apps → Setup policies → Global → Upload custom apps = On** (sideloading).
-6. Poslat Claudovi: App ID, Tenant ID, secret (ideálně ne do chatu — rovnou do `/root/Projects/teams-claude-bot/.env`).
+## Krok A — registrace bota (HOTOVO 2026-09-07 přes Teams Developer Portal)
+Azure Portal cesta z upstream návodu vyžaduje Azure subscription, kterou Eventuality nemá. Funkční cesta bez ní:
+1. https://dev.teams.microsoft.com (admin tenantu) → **Tools → Bot management → + New Bot** → jméno → Add.
+   Bot vzniká jako **single tenant**, v Entra se automaticky založí service principal.
+2. Bot → **Configure → Endpoint address** = `https://teamsbot.eventuality.app/api/messages` → Save.
+3. Bot → **Client secrets → Add a client secret** → hodnotu hned opsat (zobrazí se jen jednou).
+4. **Bot ID** ze seznamu Bot management = `MICROSOFT_APP_ID`. Tenant ID: Entra → Overview, nebo veřejně
+   `curl -s https://login.microsoftonline.com/eventuality.cz/v2.0/.well-known/openid-configuration` (pole `issuer`).
+5. Teams admin center: **Manage apps → Org-wide app settings → Custom apps = On** a
+   **Setup policies → Global → Upload custom apps = On** (propisuje se až hodiny).
+
+Aktuální hodnoty: Bot ID `f79a0dcf-5d1b-4299-af72-353b1ae61813`, tenant `6775b406-54a0-4379-8098-076badb7f49a`,
+`TEAMS_APP_ID` `30e786fe-e881-4f6c-a8a3-0a2d0ceefac0`. Secret jen v `.env` na vps.
 
 ## Krok B — Claude (po dodání údajů)
 ```bash
 ssh vps
 cd /root/Projects/teams-claude-bot
 # .env: doplnit MICROSOFT_APP_ID / MICROSOFT_APP_PASSWORD / MICROSOFT_APP_TENANT_ID (chmod 600)
-npm run package                      # → teams-claude-bot.zip (manifest s App ID)
+# zip se balí na Macu (na vps není `zip`): node scripts/package-manifest.mjs <BotID> <TEAMS_APP_ID>
 systemctl enable --now teams-claude-bot.service
 curl -s https://teamsbot.eventuality.app/healthz
 ```
