@@ -9,10 +9,20 @@
 import { writeFileSync, unlinkSync, existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
 
+// Three shapes count as approval:
+//  1. explicit verb anywhere at the start: "potvrzuji", "jo, schvaluju", ": potvrzuji"
+//  2. affirmation + zapiš with anything after: "ano zapiš to 26A0150 je to ten projekt"
+//  3. a bare whole-message "zapiš" / "zapiš to" / "ano" / "ok"
+// NOT approval: "zapiš tohle https://…", "zapiš to https://…", "ano, ale oprav projekt" (requests / corrections)
+const AFFIRM = "(?:ano|jo|jj|ok|okay|jasně|souhlas|souhlasím)";
+const VERB = "(?:potvrzuji|potvrzuju|potvrzeno|schvaluji|schvaluju|confirm(?:ed)?)";
+const ZAPIS = "(?:zapiš|zapis)";
 export const DEFAULT_UNLOCK_PATTERN =
-  "^\\s*[:,\\-–]?\\s*(?:(?:ano|jo|jj|ok|okay|jasně|souhlas|souhlasím)[\\s,.!]*)?" +
-  // "zapiš" / "zapiš to" count only as a WHOLE message — "zapiš to https://…" is a request, not approval
-  "(potvrzuji|potvrzuju|potvrzeno|schvaluji|schvaluju|confirm(?:ed)?|(?:zapiš|zapis)(?:\\s+to)?(?=\\s*[.!]*\\s*$))";
+  "^\\s*[:,\\-–]?\\s*(?:" +
+  `(?:${AFFIRM}[\\s,.!]*)?${VERB}\\b` +
+  `|${AFFIRM}[\\s,.!]+${ZAPIS}\\b(?![^\\n]*\\b(?:ale|oprav|počkej|pockej|ne)\\b)` +
+  `|(?:${ZAPIS}(?:\\s+to)?|${AFFIRM})(?=\\s*[.!]*\\s*$)` +
+  ")";
 
 export function isUnlockMessage(text: string, pattern: RegExp): boolean {
   return pattern.test(text);
