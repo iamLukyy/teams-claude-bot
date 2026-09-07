@@ -17,10 +17,12 @@ import { dirname } from "path";
 const AFFIRM = "(?:ano|jo|jj|ok|okay|jasně|souhlas|souhlasím)";
 const VERB = "(?:potvrzuji|potvrzuju|potvrzeno|schvaluji|schvaluju|confirm(?:ed)?)";
 const ZAPIS = "(?:zapiš|zapis)";
+// JS \\b is ASCII-only: after "zapiš" (š) there is no word boundary → explicit end-of-word lookahead
+const EOW = "(?=$|[\\s.,!:;\"„“])";
 export const DEFAULT_UNLOCK_PATTERN =
   "^\\s*[:,\\-–]?\\s*(?:" +
-  `(?:${AFFIRM}[\\s,.!]*)?${VERB}\\b` +
-  `|${AFFIRM}[\\s,.!]+${ZAPIS}\\b(?![^\\n]*\\b(?:ale|oprav|počkej|pockej|ne)\\b)` +
+  `(?:${AFFIRM}[\\s,.!]*)?${VERB}${EOW}` +
+  `|${AFFIRM}[\\s,.!]+${ZAPIS}${EOW}(?![^\\n]*(?:^|\\s)(?:ale|oprav|počkej|pockej|ne)(?=$|[\\s.,!]))` +
   `|(?:${ZAPIS}(?:\\s+to)?|${AFFIRM})(?=\\s*[.!]*\\s*$)` +
   ")";
 
