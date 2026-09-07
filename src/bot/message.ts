@@ -172,8 +172,18 @@ export function registerMessageHandler(app: App): void {
     // (e.g. /compact), stream stays untouched and closes silently.
     // Set immediately after guard to prevent concurrent turns during
     // async work (e.g. attachment downloads).
+    // Teams supports streamed replies only in personal (1:1) chats. In group
+    // chats / channels the stream API answers 405, so go proactive from the start
+    // (progress + final answer as normal messages) instead of waiting 90 s for
+    // the stream timer to give up.
+    const isGroup = activity.conversation?.isGroup === true;
     const { stream } = ctx;
-    managed.stream = stream;
+    if (isGroup) {
+      console.log("[BOT] Group conversation — streaming disabled, using proactive messages");
+      managed.stream = undefined;
+    } else {
+      managed.stream = stream;
+    }
 
     // Process attachments — downloads happen while user sees typing indicator
     const rawAttachments = hasAttachments
@@ -205,7 +215,7 @@ export function registerMessageHandler(app: App): void {
 
     if (!text && inlineBlocks.length === 0) return;
 
-    patchStreamCancellation(stream, (isUserCancel) => {
+    patchStreamCancellation(managed.stream, (isUserCancel) => {
       if (isUserCancel && !managed.streamExpired) {
         // User clicked Stop — interrupt Claude
         managed.session.interrupt();
