@@ -46,3 +46,18 @@ export function closeWriteWindow(
     /* best-effort */
   }
 }
+
+/** Marker the Claude session puts on its own line at the end of a confirmation card. */
+export const CONFIRM_MARKER = "[[POTVRDIT]]";
+
+/** Strip the marker from a response; `confirm` tells the bridge to append the button card. */
+export function splitConfirmMarker(text: string): { text: string; confirm: boolean } {
+  if (!text.includes(CONFIRM_MARKER)) return { text, confirm: false };
+  const cleaned = text
+    .split("\n")
+    .filter((line) => line.trim() !== CONFIRM_MARKER)
+    .join("\n")
+    .replaceAll(CONFIRM_MARKER, "")
+    .trimEnd();
+  return { text: cleaned, confirm: true };
+}

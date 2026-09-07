@@ -8,7 +8,10 @@ import {
   buildHandoffCard,
   handleCardAction,
   interactiveCards,
+  actionMsg,
+  CONFIRM_ACTIONS,
 } from "./bot/cards.js";
+import { openWriteWindow } from "./bot/unlock.js";
 import { loadConversationRefs } from "./handoff/store.js";
 import { registerHandoffRoute } from "./handoff/api.js";
 import {
@@ -17,6 +20,7 @@ import {
   expireIdleSession,
   getLastActivityAt,
   getModel,
+  touchActivity,
 } from "./session/state.js";
 import { isAadAllowed, isConversationAllowed } from "./bot/access.js";
 import { registerMessageHandler } from "./bot/message.js";
@@ -94,6 +98,53 @@ teamsApp.on("card.action", async (ctx) => {
   const sendFn = async (activity: string | ActivityParams) => {
     await ctx.send(activity);
   };
+
+  // "✅ Zapsat" / "⏭️ Nezapisovat" under a confirmation card: the click is the
+  // human approval — open the write window (confirm only) and hand the decision
+  // to the Claude session as if the user had typed it.
+  const action0 = data.action as string | undefined;
+  if (action0 && CONFIRM_ACTIONS.has(action0)) {
+    const managed = getSession();
+    const who = ctx.activity.from?.name ?? "uživatel";
+    if (!managed) {
+      return actionMsg("Session není aktivní — napiš potvrzení textem.");
+    }
+    if (ctx.activity.replyToId && conversationId) {
+      try {
+        await ctx.api.conversations
+          .activities(conversationId)
+          .delete(ctx.activity.replyToId);
+      } catch {
+        /* card may be gone */
+      }
+    }
+    managed.confirmCardId = undefined;
+    touchActivity();
+    // No Teams stream in an invoke context → proactive messages
+    managed.stream = undefined;
+    managed.streamActivated = false;
+    managed.streamExpired = false;
+    if (action0 === "caflou_confirm") {
+      if (config.writeUnlockFile) {
+        managed.closeWriteWindow?.();
+        managed.closeWriteWindow = openWriteWindow(
+          config.writeUnlockFile,
+          config.writeUnlockTtlMin * 60_000,
+        );
+      }
+      console.log(`[WRITE] unlock by button, aad=${aad ?? "?"} conv=${conversationId ?? "?"}`);
+      await ctx.send(`✅ ${who} potvrdil zápis.`);
+      managed.session.send(
+        `POTVRZENÍ (tlačítko ✅ Zapsat, ${who}): potvrzuji, zapiš přesně podle karty a pošli read-back.`,
+      );
+      return actionMsg("Potvrzeno, zapisuji…");
+    }
+    await ctx.send(`⏭️ ${who}: nezapisovat.`);
+    managed.session.send(
+      `${who} klikl ⏭️ Nezapisovat. Nic nezapisuj. Zeptej se jednou větou proč (nepatří sem / zapíšu ručně / počkat na finální doklad) a podle odpovědi uprav štítek uploadu.`,
+    );
+    return actionMsg("Nezapisovat");
+  }
 
   const deleteFn = conversationId
     ? async (activityId: string) => {

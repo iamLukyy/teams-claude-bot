@@ -479,7 +479,7 @@ async function deleteInteractiveCard(
   }
 }
 
-function actionMsg(value: string): AdaptiveCardActionMessageResponse {
+export function actionMsg(value: string): AdaptiveCardActionMessageResponse {
   return {
     statusCode: 200,
     type: "application/vnd.microsoft.activity.message",
@@ -659,4 +659,43 @@ export async function handleCardAction(
   }
 
   return actionMsg("Action processed");
+}
+
+// ─── Caflou confirmation card (buttons under the session's text card) ───────
+
+export const CONFIRM_ACTIONS = new Set(["caflou_confirm", "caflou_reject"]);
+
+export function buildConfirmCard(): IAdaptiveCard {
+  return {
+    type: "AdaptiveCard",
+    version: "1.4",
+    body: [
+      {
+        type: "TextBlock",
+        text: "Zapsat do Caflou podle karty výše?",
+        wrap: true,
+        weight: "Bolder",
+      },
+      {
+        type: "TextBlock",
+        text: "Opravy piš textem, např. „oprav projekt na 26A0064“.",
+        wrap: true,
+        isSubtle: true,
+        size: "Small",
+      },
+    ],
+    actions: [
+      {
+        type: "Action.Execute",
+        title: "✅ Zapsat",
+        style: "positive",
+        data: { action: "caflou_confirm" },
+      },
+      {
+        type: "Action.Execute",
+        title: "⏭️ Nezapisovat",
+        data: { action: "caflou_reject" },
+      },
+    ],
+  } as IAdaptiveCard;
 }

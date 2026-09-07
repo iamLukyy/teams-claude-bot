@@ -23,7 +23,8 @@ import {
   formatProgressMessage,
 } from "../claude/formatter.js";
 import { createToolInterceptor } from "../claude/tool-interceptor.js";
-import { buildToolCard } from "./cards.js";
+import { buildToolCard, buildConfirmCard } from "./cards.js";
+import { splitConfirmMarker } from "./unlock.js";
 import {
   handleElicitation,
   buildElicitationCard,
@@ -650,7 +651,14 @@ export function createManagedSession(
             managed.pendingReaction = reactionType;
           }
           console.log("[BOT] Formatting and sending response");
-          await progress.finalize(splitMessage(formatResponse(result)));
+          const { text: body, confirm } = splitConfirmMarker(formatResponse(result));
+          await progress.finalize(splitMessage(body));
+          if (confirm) {
+            const cardId = await sendCard(buildConfirmCard());
+            const m = state.getSession();
+            if (m) m.confirmCardId = cardId;
+            console.log("[BOT] Confirm card sent:", cardId);
+          }
         }
 
         console.log("[BOT] Response sent successfully");
@@ -667,6 +675,10 @@ export function createManagedSession(
         }
         if (managed?.streamExpired) {
           managed.streamExpired = false;
+        }
+        if (managed?.closeWriteWindow) {
+          managed.closeWriteWindow();
+          managed.closeWriteWindow = undefined;
         }
         if (managed?.onTurnComplete) {
           const resolve = managed.onTurnComplete;

@@ -41,6 +41,8 @@ export interface ManagedSession {
   pendingReaction?: string;
   /** Closes the caflou write window opened for the current turn (see bot/unlock.ts). */
   closeWriteWindow?: () => void;
+  /** Activity ID of the "✅ Zapsat / ⏭️ Nezapisovat" card (deleted after a click). */
+  confirmCardId?: string;
 }
 
 // ─── Persistence ───
