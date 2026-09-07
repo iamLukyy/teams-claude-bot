@@ -37,6 +37,7 @@ v `/root/Projects/teams-claude-bot`; pracovní adresář session je `/root/Proje
 | Manifest: scope `groupChat`, branding Eventuality | `manifest/manifest.json` | — |
 | `/healthz`: model, idleHours, lastActivityAt | `src/index.ts` | — |
 | Karty s návrhem dalšího promptu vypnuté (šum ve sdíleném chatu) | `src/claude/session.ts` | `PROMPT_SUGGESTIONS` (0) |
+| Normalizace markdownu pro Teams před odesláním (tabulka na vlastním bloku, prázdné řádky před nadpisy/seznamy/tabulkami) | `src/claude/formatter.ts` `normalizeTeamsMarkdown` | — |
 | Bez streamování ve skupinách (Teams vrací 405) — rovnou proaktivní zprávy | `src/bot/message.ts` | — |
 | **Tlačítka pod kartou**: když odpověď session končí řádkem `[[POTVRDIT]]`, bridge ho odstraní a pošle Adaptive Card „✅ Zapsat / ⏭️ Nezapisovat" (Action.Execute → `card.action`). Klik = ověřený uživatel; ✅ otevře zápisové okno a pošle potvrzení do session, ⏭️ pošle odmítnutí | `src/bot/unlock.ts`, `src/bot/cards.ts`, `src/bot/bridge.ts`, `src/index.ts` | — |
 | **Zápisové okno**: zpráva „potvrzuji/schvaluji/confirm" od povoleného uživatele vytvoří na jeden tah unlock soubor pro hook `caflou-write-guard` v checkeru; po tahu nebo po TTL zmizí | `src/bot/unlock.ts`, `src/bot/message.ts` | `WRITE_UNLOCK_FILE`, `WRITE_UNLOCK_TTL_MIN`, `WRITE_UNLOCK_PATTERN` |

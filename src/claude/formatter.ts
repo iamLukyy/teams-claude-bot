@@ -108,3 +108,53 @@ export function splitMessage(
   if (remaining) chunks.push(remaining);
   return chunks;
 }
+
+// ─── Teams markdown normalizer ───────────────────────────────────────────
+// Teams renders a markdown subset and is strict about block boundaries. Two
+// things broke readability in production: a table glued to the intro sentence
+// ("Podle klienta: | Klient | …") is not recognised as a table and collapses
+// into one long line, and headings/lists/tables without a blank line before
+// them merge into the previous paragraph. This keeps the model's content and
+// only fixes the boundaries.
+export function normalizeTeamsMarkdown(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let inCode = false;
+  const isTable = (l: string) => /^\s*\|/.test(l);
+  const isListItem = (l: string) => /^\s*([-*•]\s|\d+[.)]\s)/.test(l);
+  const isBlockStart = (l: string) =>
+    isListItem(l) || /^\s*(#{1,6}\s|(-{3,}|\*{3,}|_{3,})\s*$)/.test(l);
+  const last = () => (out.length ? out[out.length - 1] : "");
+
+  for (const raw of lines) {
+    if (/^\s*```/.test(raw)) {
+      inCode = !inCode;
+      out.push(raw);
+      continue;
+    }
+    if (inCode) {
+      out.push(raw);
+      continue;
+    }
+    let line = raw;
+
+    // "Intro text: | a | b |" → intro on its own line, table starts fresh
+    const emb = line.match(/^(\s*[^|]*?[^\s|])\s+(\|[^|\n]*\|.*)$/);
+    if (emb && !isTable(line) && (emb[2].match(/\|/g) ?? []).length >= 3) {
+      out.push(emb[1]);
+      out.push("");
+      line = emb[2];
+    }
+
+    const prev = last();
+    const prevBlank = prev.trim() === "";
+    const plain = line.trim() !== "" && !isTable(line) && !isBlockStart(line);
+    if (isTable(line) && !prevBlank && !isTable(prev)) out.push("");
+    else if (isBlockStart(line) && !prevBlank && !isBlockStart(prev) && !isTable(prev)) out.push("");
+    // plain text right after a table or a list item would merge into it (lazy continuation)
+    else if (plain && (isTable(prev) || isListItem(prev))) out.push("");
+
+    out.push(line);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
+}

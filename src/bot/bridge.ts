@@ -18,6 +18,7 @@ import { type ClaudeResult, type ProgressEvent } from "../claude/agent.js";
 import { ConversationSession, type SessionConfig } from "../claude/session.js";
 import {
   formatResponse,
+  normalizeTeamsMarkdown,
   splitMessage,
   codeBlockLanguage,
   formatProgressMessage,
@@ -652,7 +653,7 @@ export function createManagedSession(
           }
           console.log("[BOT] Formatting and sending response");
           const { text: body, confirm } = splitConfirmMarker(formatResponse(result));
-          await progress.finalize(splitMessage(body));
+          await progress.finalize(splitMessage(normalizeTeamsMarkdown(body)));
           if (confirm) {
             const cardId = await sendCard(buildConfirmCard());
             const m = state.getSession();
