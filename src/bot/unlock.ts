@@ -11,7 +11,8 @@ import { dirname } from "path";
 
 export const DEFAULT_UNLOCK_PATTERN =
   "^\\s*[:,\\-–]?\\s*(?:(?:ano|jo|jj|ok|okay|jasně|souhlas|souhlasím)[\\s,.!]*)?" +
-  "(potvrzuji|potvrzuju|potvrzeno|schvaluji|schvaluju|confirm(?:ed)?|zapiš to|zapis to|zapiš(?=\\s*[.!]*\\s*$))";
+  // "zapiš" / "zapiš to" count only as a WHOLE message — "zapiš to https://…" is a request, not approval
+  "(potvrzuji|potvrzuju|potvrzeno|schvaluji|schvaluju|confirm(?:ed)?|(?:zapiš|zapis)(?:\\s+to)?(?=\\s*[.!]*\\s*$))";
 
 export function isUnlockMessage(text: string, pattern: RegExp): boolean {
   return pattern.test(text);

@@ -25,6 +25,7 @@ describe("isUnlockMessage", () => {
     for (const t of [
       "kolik je tady faktur?", "nepotvrzuji", "ještě počkej", "oprav projekt na 26A0064",
       "zapiš tuto fakturu https://app.caflou.cz/x", "zapiš fakturu 2940136", "ano, ale oprav projekt",
+      "zapiš to https://app.caflou.cz/eventuality-s-r-o/uploads/2941348", "zapiš to prosím do Caflou",
     ]) {
       expect(isUnlockMessage(t, re), t).toBe(false);
     }
