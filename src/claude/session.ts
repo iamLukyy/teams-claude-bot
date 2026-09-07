@@ -747,7 +747,9 @@ export class ConversationSession {
       pathToClaudeCodeExecutable: process.env.CLAUDE_CLI_PATH || CLAUDE_CLI_PATH,
       settingSources: ["user", "project", "local"],
       includePartialMessages: true,
-      promptSuggestions: true,
+      // Upstream sends a "💡 next prompt" card after every answer; in a shared
+      // group chat that is noise (and renders as "unsupported card" on some clients).
+      promptSuggestions: process.env.PROMPT_SUGGESTIONS === "1",
       env: { ...process.env, CLAUDECODE: undefined },
     };
 
