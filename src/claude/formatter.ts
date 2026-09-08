@@ -110,12 +110,15 @@ export function splitMessage(
 }
 
 // ─── Teams markdown normalizer ───────────────────────────────────────────
-// Teams renders a markdown subset and is strict about block boundaries. Two
+// Teams renders a markdown subset and is strict about block boundaries. Four
 // things broke readability in production: a table glued to the intro sentence
 // ("Podle klienta: | Klient | …") is not recognised as a table and collapses
-// into one long line, and headings/lists/tables without a blank line before
-// them merge into the previous paragraph. This keeps the model's content and
-// only fixes the boundaries.
+// into one long line; headings/lists/tables without a blank line before them
+// merge into the previous paragraph; "•" is not a markdown list marker, so
+// such lines render flat, with no indent (the model reliably writes "•");
+// and Teams gives consecutive paragraphs no vertical gap at all, so a correct
+// "\n\n" still reads as a wall of text — only a line holding &nbsp; shows up
+// as real empty space. This keeps the model's content and fixes presentation.
 export function normalizeTeamsMarkdown(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const out: string[] = [];
@@ -136,7 +139,8 @@ export function normalizeTeamsMarkdown(text: string): string {
       out.push(raw);
       continue;
     }
-    let line = raw;
+    // "• náklad" is not a list to Teams — make it one ("- náklad")
+    let line = raw.replace(/^(\s*)[•·‣▪]\s+/, "$1- ");
 
     // "Intro text: | a | b |" → intro on its own line, table starts fresh
     const emb = line.match(/^(\s*[^|]*?[^\s|])\s+(\|[^|\n]*\|.*)$/);
@@ -156,5 +160,39 @@ export function normalizeTeamsMarkdown(text: string): string {
 
     out.push(line);
   }
-  return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
+  return addParagraphSpacers(
+    out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd(),
+  );
+}
+
+// Teams collapses the gap between two paragraphs, so a blank line is invisible.
+// A line holding only &nbsp; is the one separator it renders as real space.
+// Only between plain paragraphs — lists, tables, headings and code fences
+// bring their own margins, and a spacer there would just add noise.
+function addParagraphSpacers(text: string): string {
+  const lines = text.split("\n");
+  const isStructural = (l: string) =>
+    /^\s*(\||#{1,6}\s|[-*+]\s|\d+[.)]\s|```|>|(-{3,}|\*{3,}|_{3,})\s*$)/.test(l);
+  const out: string[] = [];
+  let inCode = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*```/.test(line)) inCode = !inCode;
+
+    if (!inCode && line.trim() === "") {
+      const prev = out.length ? out[out.length - 1] : "";
+      const next = lines[i + 1] ?? "";
+      const gap =
+        prev.trim() !== "" &&
+        next.trim() !== "" &&
+        !isStructural(prev) &&
+        !isStructural(next);
+      if (gap) {
+        out.push("", "&nbsp;");
+      }
+    }
+    out.push(line);
+  }
+  return out.join("\n");
 }

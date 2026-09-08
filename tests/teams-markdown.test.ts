@@ -24,6 +24,30 @@ describe("normalizeTeamsMarkdown", () => {
   });
 
   it("collapses runs of blank lines", () => {
-    expect(normalizeTeamsMarkdown("a\n\n\n\nb")).toBe("a\n\nb");
+    expect(normalizeTeamsMarkdown("a\n\n\n\nb")).toBe("a\n\n&nbsp;\n\nb");
+  });
+
+  it("turns bullet-character lines into real markdown list items", () => {
+    const input = "Projekt:\n\n\u2022 n\u00e1klad: 60 705 K\u010d\n\u2022 v\u00fdnos: 42 600 K\u010d";
+    expect(normalizeTeamsMarkdown(input)).toBe(
+      "Projekt:\n\n- n\u00e1klad: 60 705 K\u010d\n- v\u00fdnos: 42 600 K\u010d",
+    );
+  });
+
+  it("puts a spacer between consecutive paragraphs so Teams shows a gap", () => {
+    const input = "Prvn\u00ed odstavec.\n\n**Nadpis tu\u010dn\u011b**\n\nDruh\u00fd odstavec.";
+    expect(normalizeTeamsMarkdown(input)).toBe(
+      "Prvn\u00ed odstavec.\n\n&nbsp;\n\n**Nadpis tu\u010dn\u011b**\n\n&nbsp;\n\nDruh\u00fd odstavec.",
+    );
+  });
+
+  it("does not put a spacer around lists, tables or headings", () => {
+    const input = "Souhrn.\n\n- prvn\u00ed\n- druh\u00e1\n\nKonec.";
+    expect(normalizeTeamsMarkdown(input)).toBe(input);
+  });
+
+  it("does not put a spacer inside code blocks", () => {
+    const input = "Text.\n\n```\na\n\nb\n```";
+    expect(normalizeTeamsMarkdown(input)).toBe(input);
   });
 });
